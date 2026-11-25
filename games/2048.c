@@ -6,6 +6,7 @@
 #include <time.h>
 #include <raylib.h>
 #include "../shared/neuros_effect.c"
+#include "../shared/neuros_start.c"
 #include "../shared/neuros_audio.c"
 
 #define WIDTH 1200
@@ -78,9 +79,18 @@ int main(void)
     Game game = {0};
     resetGame(&game);
 
+    bool showTitle = true;
     while (!WindowShouldClose()) {
+        if (IsKeyPressed(KEY_F11)) { toggleNeurosFullscreen(&effect); }
         if (IsKeyPressed(KEY_M)) { toggleNeurosAudio(); }
         if (IsKeyPressed(KEY_F) && effect.ready) { effect.enabled = !effect.enabled; }
+        if (showTitle) {
+            if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_KP_ENTER)) { showTitle = false; }
+            beginNeurosEffect(&effect);
+            drawArcadeStart(ARCADE_2048);
+            endNeurosEffect(&effect);
+            continue;
+        }
         if (IsKeyPressed(KEY_R)) { resetGame(&game); }
         else if (IsKeyPressed(KEY_U)) { undoMove(&game); }
         else if (game.showWin) {
@@ -259,7 +269,7 @@ void drawGame(const Game *game)
             drawCentered(label, px, py + (CELL - fontSize) / 2, CELL, fontSize, TEXT);
         }
     }
-    DrawRectangle(945, 165, 210, 290, PANEL);
+    DrawRectangle(945, 165, 210, 320, PANEL);
     DrawText("CONTROLS", 962, 184, 19, MINT);
     DrawText("ARROWS / WASD", 962, 225, 16, TEXT);
     DrawText("MOVE TILES", 962, 247, 14, MUTED);
@@ -268,7 +278,8 @@ void drawGame(const Game *game)
     DrawText("F    SCREEN FX", 962, 344, 16, TEXT);
     DrawText("M    SOUND", 962, 373, 16, TEXT);
     DrawText("ESC  QUIT", 962, 402, 16, TEXT);
-    if (neurosAudio.muted || !neurosAudio.ready) { DrawText("SOUND OFF", 962, 428, 14, MUTED); }
+    DrawText("F11  FULLSCREEN", 962, 428, 16, TEXT);
+    if (neurosAudio.muted || !neurosAudio.ready) { DrawText("SOUND OFF", 962, 456, 14, MUTED); }
     DrawText("EQUAL TILES MERGE ONCE PER MOVE", BOARD_X + 35, 825, 17, MUTED);
     if (game->showWin || game->board.gameOver) {
         DrawRectangle(BOARD_X, BOARD_Y, BOARD_SIZE, BOARD_SIZE, Fade(BACKGROUND, 0.94f));

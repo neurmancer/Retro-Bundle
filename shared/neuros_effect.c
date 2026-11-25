@@ -6,6 +6,12 @@ typedef struct {
     RenderTexture2D target;
     Shader shader;
     int timeLocation;
+    int width;
+    int height;
+    int targetScale;
+    int windowWidth;
+    int windowHeight;
+    Vector2 windowPosition;
     bool ready;
     bool enabled;
 } NeurosEffect;
@@ -13,6 +19,11 @@ typedef struct {
 NeurosEffect loadNeurosEffectNamed(int width, int height, float strength, Vector3 accent, const char *filename)
 {
     NeurosEffect effect = {0};
+    effect.width = width;
+    effect.height = height;
+    effect.targetScale = 1;
+    effect.target = LoadRenderTexture(width, height);
+    if (effect.target.id == 0) { TraceLog(LOG_WARNING, "NeurOS render target could not be created"); }
     char executablePath[1024];
     char parentPath[1024];
     snprintf(executablePath, sizeof(executablePath), "%sshaders/%s", GetApplicationDirectory(), filename);
@@ -36,13 +47,6 @@ NeurosEffect loadNeurosEffectNamed(int width, int height, float strength, Vector
         effect.shader = (Shader){0};
         return(effect);
     }
-    effect.target = LoadRenderTexture(width, height);
-    if (effect.target.id == 0) {
-        TraceLog(LOG_WARNING, "NeurOS render target could not be created; drawing without effects");
-        UnloadShader(effect.shader);
-        effect.shader = (Shader){0};
-        return(effect);
-    }
     Vector2 resolution = {(float)width, (float)height};
     SetShaderValue(effect.shader, resolutionLocation, &resolution, SHADER_UNIFORM_VEC2);
     SetShaderValue(effect.shader, strengthLocation, &strength, SHADER_UNIFORM_FLOAT);
@@ -57,30 +61,93 @@ NeurosEffect loadNeurosEffect(int width, int height, float strength, Vector3 acc
     return(loadNeurosEffectNamed(width, height, strength, accent, "neuros_retro.fs"));
 }
 
+bool setNeurosRenderScale(NeurosEffect *effect, int scale)
+{
+    if (scale < 1 || scale > 2 || effect->width <= 0 || effect->height <= 0) { return(false); }
+    if (effect->target.id != 0 && scale == effect->targetScale) { return(true); }
+    RenderTexture2D target = LoadRenderTexture(effect->width * scale, effect->height * scale);
+    if (target.id == 0) { return(false); }
+    SetTextureFilter(target.texture, TEXTURE_FILTER_BILINEAR);
+    if (effect->target.id != 0) { UnloadRenderTexture(effect->target); }
+    effect->target = target;
+    effect->targetScale = scale;
+    if (effect->ready) {
+        int location = GetShaderLocation(effect->shader, "resolution");
+        Vector2 resolution = {(float)effect->target.texture.width, (float)effect->target.texture.height};
+        SetShaderValue(effect->shader, location, &resolution, SHADER_UNIFORM_VEC2);
+    }
+    return(true);
+}
+
+Rectangle neurosViewport(int width, int height, int screenWidth, int screenHeight)
+{
+    if (width <= 0 || height <= 0 || screenWidth <= 0 || screenHeight <= 0) { return((Rectangle){0}); }
+    float scaleX = (float)screenWidth / width;
+    float scaleY = (float)screenHeight / height;
+    float scale = scaleX < scaleY ? scaleX : scaleY;
+    float outputWidth = width * scale;
+    float outputHeight = height * scale;
+    return((Rectangle){(screenWidth - outputWidth) / 2.0f, (screenHeight - outputHeight) / 2.0f, outputWidth, outputHeight});
+}
+
+void toggleNeurosFullscreen(NeurosEffect *effect)
+{
+    if (IsWindowFullscreen()) {
+        ToggleFullscreen();
+        if (effect->windowWidth > 0 && effect->windowHeight > 0) {
+            SetWindowSize(effect->windowWidth, effect->windowHeight);
+            SetWindowPosition((int)effect->windowPosition.x, (int)effect->windowPosition.y);
+        }
+    }
+    else {
+        effect->windowWidth = GetScreenWidth();
+        effect->windowHeight = GetScreenHeight();
+        effect->windowPosition = GetWindowPosition();
+        ToggleFullscreen();
+    }
+}
+
 void beginNeurosEffect(NeurosEffect *effect)
 {
-    if (effect->ready && effect->enabled) { BeginTextureMode(effect->target); }
-    else { BeginDrawing(); }
+    if (effect->target.id != 0) {
+        BeginTextureMode(effect->target);
+        if (effect->targetScale > 1) {
+            Camera2D camera = {0};
+            camera.zoom = (float)effect->targetScale;
+            BeginMode2D(camera);
+        }
+    }
+    else {
+        BeginDrawing();
+        Rectangle viewport = neurosViewport(effect->width, effect->height, GetScreenWidth(), GetScreenHeight());
+        Camera2D camera = {0};
+        camera.offset = (Vector2){viewport.x, viewport.y};
+        camera.zoom = viewport.width / effect->width;
+        BeginMode2D(camera);
+    }
 }
 
 void endNeurosEffect(NeurosEffect *effect)
 {
-    if (!effect->ready || !effect->enabled) { EndDrawing(); return; }
+    if (effect->target.id == 0) { EndMode2D(); EndDrawing(); return; }
+    if (effect->targetScale > 1) { EndMode2D(); }
     EndTextureMode();
-    float time = (float)GetTime();
-    SetShaderValue(effect->shader, effect->timeLocation, &time, SHADER_UNIFORM_FLOAT);
     BeginDrawing();
     ClearBackground(BLACK);
-    BeginShaderMode(effect->shader);
-    DrawTextureRec(effect->target.texture, (Rectangle){0, 0, (float)effect->target.texture.width, -(float)effect->target.texture.height}, (Vector2){0, 0}, WHITE);
-    EndShaderMode();
+    if (effect->ready && effect->enabled) {
+        float time = (float)GetTime();
+        SetShaderValue(effect->shader, effect->timeLocation, &time, SHADER_UNIFORM_FLOAT);
+        BeginShaderMode(effect->shader);
+    }
+    Rectangle source = {0, 0, (float)effect->target.texture.width, -(float)effect->target.texture.height};
+    Rectangle viewport = neurosViewport(effect->width, effect->height, GetScreenWidth(), GetScreenHeight());
+    DrawTexturePro(effect->target.texture, source, viewport, (Vector2){0, 0}, 0, WHITE);
+    if (effect->ready && effect->enabled) { EndShaderMode(); }
     EndDrawing();
 }
 
 void unloadNeurosEffect(NeurosEffect *effect)
 {
-    if (effect->ready) {
-        UnloadRenderTexture(effect->target);
-        UnloadShader(effect->shader);
-    }
+    if (effect->target.id != 0) { UnloadRenderTexture(effect->target); }
+    if (effect->ready) { UnloadShader(effect->shader); }
 }

@@ -5,6 +5,7 @@
 #include <time.h>
 #include <raylib.h>
 #include "../shared/neuros_effect.c"
+#include "../shared/neuros_start.c"
 #include "../shared/neuros_audio.c"
 
 #define WIDTH 1200
@@ -94,9 +95,18 @@ int main(void)
     NeurosEffect effect = loadNeurosEffect(WIDTH, HEIGHT, 0.50f, (Vector3){0.21f, 0.75f, 1.0f});
     Game game = {0};
     resetGame(&game);
+    bool showTitle = true;
     while (!WindowShouldClose()) {
+        if (IsKeyPressed(KEY_F11)) { toggleNeurosFullscreen(&effect); }
         if (IsKeyPressed(KEY_M)) { toggleNeurosAudio(); }
         if (IsKeyPressed(KEY_F) && effect.ready) { effect.enabled = !effect.enabled; }
+        if (showTitle) {
+            if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_KP_ENTER)) { showTitle = false; }
+            beginNeurosEffect(&effect);
+            drawArcadeStart(ARCADE_TETRIS);
+            endNeurosEffect(&effect);
+            continue;
+        }
         float dt = GetFrameTime();
         if (dt > 0.1f) { dt = 0.1f; }
         if (game.gameOver && IsKeyPressed(KEY_R)) { resetGame(&game); }
@@ -386,7 +396,8 @@ void drawGame(const Game *game)
     DrawText("P             PAUSE", 190, 515, 16, TEXT);
     DrawText("F             TOGGLE FX", 190, 545, 16, TEXT);
     DrawText("M             SOUND", 190, 575, 16, TEXT);
-    DrawText("ESC           QUIT", 190, 605, 16, TEXT);
+    DrawText("F11           FULLSCREEN", 190, 605, 16, TEXT);
+    DrawText("ESC           QUIT", 190, 635, 16, TEXT);
     if (game->paused || game->gameOver) {
         DrawRectangle(BOARD_X, BOARD_Y, BOARD_WIDTH * CELL_SIZE, BOARD_HEIGHT * CELL_SIZE, Fade(BACKGROUND, 0.92f));
         drawCentered(game->gameOver ? "GAME OVER" : "PAUSED", BOARD_X, BOARD_Y + 270, BOARD_WIDTH * CELL_SIZE, 36, game->gameOver ? NEON_VIOLET : MINT);

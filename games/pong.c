@@ -5,6 +5,7 @@
 #include <time.h>
 #include <raylib.h>
 #include "../shared/neuros_effect.c"
+#include "../shared/neuros_start.c"
 #include "../shared/neuros_audio.c"
 
 #define WIDTH 1200
@@ -84,9 +85,18 @@ int main(void)
     resetMatch(&game);
     float accumulator = 0.0f;
 
+    bool showTitle = true;
     while (!WindowShouldClose()) {
+        if (IsKeyPressed(KEY_F11)) { toggleNeurosFullscreen(&effect); }
         if (IsKeyPressed(KEY_M)) { toggleNeurosAudio(); }
         if (IsKeyPressed(KEY_F) && effect.ready) { effect.enabled = !effect.enabled; }
+        if (showTitle) {
+            if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_KP_ENTER)) { showTitle = false; }
+            beginNeurosEffect(&effect);
+            drawArcadeStart(ARCADE_PONG);
+            endNeurosEffect(&effect);
+            continue;
+        }
         float dt = GetFrameTime();
         if (dt > 0.1f) { dt = 0.1f; }
         if (IsKeyPressed(KEY_TAB)) { game.theme = (game.theme + 1) % (int)(sizeof(THEMES) / sizeof(THEMES[0])); }
@@ -245,5 +255,5 @@ void drawGame(const Game *game)
             drawCentered("PRESS R TO REMATCH", 500, 20, theme.text);
         }
     }
-    DrawText("P1: W / S    P2: UP / DOWN    P: PAUSE    TAB: THEME    E: LINE    F: FX    M: SOUND    ESC: QUIT", 38, 860, 16, theme.muted);
+    DrawText("P1: W / S    P2: UP / DOWN    P: PAUSE    TAB: THEME    E: LINE    F: FX    M: SOUND    F11: FULLSCREEN    ESC: QUIT", 38, 860, 14, theme.muted);
 }
