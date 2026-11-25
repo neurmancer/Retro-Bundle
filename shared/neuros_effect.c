@@ -10,15 +10,17 @@ typedef struct {
     bool enabled;
 } NeurosEffect;
 
-NeurosEffect loadNeurosEffect(int width, int height, float strength, Vector3 accent)
+NeurosEffect loadNeurosEffectNamed(int width, int height, float strength, Vector3 accent, const char *filename)
 {
     NeurosEffect effect = {0};
     char executablePath[1024];
     char parentPath[1024];
-    snprintf(executablePath, sizeof(executablePath), "%sshaders/neuros_retro.fs", GetApplicationDirectory());
-    snprintf(parentPath, sizeof(parentPath), "%s../shaders/neuros_retro.fs", GetApplicationDirectory());
+    snprintf(executablePath, sizeof(executablePath), "%sshaders/%s", GetApplicationDirectory(), filename);
+    snprintf(parentPath, sizeof(parentPath), "%s../shaders/%s", GetApplicationDirectory(), filename);
     const char *path = NULL;
-    if (FileExists("shaders/neuros_retro.fs")) { path = "shaders/neuros_retro.fs"; }
+    char localPath[1024];
+    snprintf(localPath, sizeof(localPath), "shaders/%s", filename);
+    if (FileExists(localPath)) { path = localPath; }
     else if (FileExists(executablePath)) { path = executablePath; }
     else if (FileExists(parentPath)) { path = parentPath; }
     if (path == NULL) { TraceLog(LOG_WARNING, "NeurOS shader not found; drawing without effects"); return(effect); }
@@ -48,6 +50,11 @@ NeurosEffect loadNeurosEffect(int width, int height, float strength, Vector3 acc
     effect.ready = true;
     effect.enabled = true;
     return(effect);
+}
+
+NeurosEffect loadNeurosEffect(int width, int height, float strength, Vector3 accent)
+{
+    return(loadNeurosEffectNamed(width, height, strength, accent, "neuros_retro.fs"));
 }
 
 void beginNeurosEffect(NeurosEffect *effect)
