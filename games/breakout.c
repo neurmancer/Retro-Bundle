@@ -1,527 +1,279 @@
-/* ================== INCLUDES ===================== */
-
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
-
-//External Headers 
-#include <raylib.h>
 #include <math.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <raylib.h>
 
-/* ===================== DEFINES ====================== */
-
-
-// Window
-
-#define WIDTH 1200.0f
-#define HEIGHT 900.0f
-
-#define TITLE "Breakout Duh..."
-
-// Game settings
-
+#define WIDTH 1200
+#define HEIGHT 900
 #define BRICK_ROWS 6
 #define BRICK_COLUMNS 12
+#define BRICK_COUNT (BRICK_ROWS * BRICK_COLUMNS)
+#define PADDLE_WIDTH 180.0f
+#define PADDLE_HEIGHT 16.0f
+#define PADDLE_SPEED 640.0f
+#define BALL_RADIUS 9.0f
+#define BALL_SPEED 440.0f
+#define STEP (1.0f / 240.0f)
 
-//Colors (using the same colors from gravityThingy.c)
-
-#define SKY_BLUE        CLITERAL(Color){  79, 195, 247, 255 }  // #4FC3F7
-#define AZURE           CLITERAL(Color){  41, 182, 246, 255 }  // #29B6F6
-#define ELECTRIC_CYAN   CLITERAL(Color){   0, 229, 255, 255 }  // #00E5FF
-#define TURQUOISE       CLITERAL(Color){  38, 198, 218, 255 }  // #26C6DA
-#define NEON_GREEN      CLITERAL(Color){   0, 230, 118, 255 }  // #00E676
-#define EMERALD         CLITERAL(Color){ 102, 187, 106, 255 }  // #66BB6A
-#define LIME_GREEN      CLITERAL(Color){ 156, 204, 101, 255 }  // #9CCC65
-#define YELLOW_GREEN    CLITERAL(Color){ 212, 225,  87, 255 }  // #D4E157
-#define BRIGHT_YELLOW   CLITERAL(Color){ 255, 235,  59, 255 }  // #FFEB3B
-#define GOLDY            CLITERAL(Color){ 255, 213,  79, 255 }  // #FFD54F
-#define AMBER           CLITERAL(Color){ 255, 183,  77, 255 }  // #FFB74D
-#define ORANGEY          CLITERAL(Color){ 255, 152,   0, 255 }  // #FF9800
-#define CORAL           CLITERAL(Color){ 255, 112,  67, 255 }  // #FF7043
-#define DEEP_ORANGE     CLITERAL(Color){ 244,  81,  30, 255 }  // #F4511E
-#define REDISH             CLITERAL(Color){ 239,  83,  80, 255 }  // #EF5350
-#define MAGENTA_DUH         CLITERAL(Color){ 233,  30,  99, 255 }  // #E91E63
-#define PINKY            CLITERAL(Color){ 240,  98, 146, 255 }  // #F06292
-#define HOT_PINK        CLITERAL(Color){ 236,  64, 122, 255 }  // #EC407A
-#define SHE_LOVES_PURPLE          CLITERAL(Color){ 171,  71, 188, 255 }  // #AB47BC
-#define SO_DO_I          CLITERAL(Color){ 126,  87, 194, 255 }  // #7E57C2
-#define INDIGO          CLITERAL(Color){  92, 107, 192, 255 }  // #5C6BC0
-#define BLUE_GRAY       CLITERAL(Color){ 144, 164, 174, 255 }  // #90A4AE
-#define SILVER          CLITERAL(Color){ 207, 216, 220, 255 }  // #CFD8DC
-#define RED_AF          CLITERAL(Color){  41,   3,   0, 255 }  // #290300
-
-#define COLOR_ARR_SIZE 24
-
-static const float BRICK_LENGTH = WIDTH/14;
-static const float BRICK_HEIGHT = HEIGHT/32;
-static const float Y_OFFSET = HEIGHT/10;
-static const float X_OFFSET = BRICK_LENGTH/8;
-
-// Compile-time settings
-
-#ifndef FPS 
-    #define FPS 120
-#endif 
+#ifndef FPS
+#define FPS 120
+#endif
 
 #ifndef VSYNC
-    #define VSYNC 0
-#endif 
+#define VSYNC 0
+#endif
 
+typedef enum {
+    READY,
+    PLAYING,
+    PAUSED,
+    WON,
+    LOST
+} Phase;
 
-/* =================== OBJECTS ========================= */
-
-typedef struct{
-
-    Vector2 pos;
-    Vector2 size;
-
+typedef struct {
+    Rectangle rect;
     Color color;
+    bool active;
+} Brick;
 
-    int isDestroyed;
-    int powerUp;
-
-    int scoreVal; 
-}Brick;
-
-typedef struct{
-
-    Vector2 pos;
-    Vector2 vel;
-    Vector2 accel;  //For future power-ups
-
-    Vector2 defaultVel;
-
-    float radius;
-
-    Color color;
-
-
-}Ball;
-
-typedef struct{
-
-    Vector2 pos;
-    Vector2 speed;
-    Vector2 size;
-    Color color;
-
-}Paddle;
-
-typedef struct{
-    int remainingLives;
+typedef struct {
+    Rectangle paddle;
+    Vector2 ball;
+    Vector2 velocity;
+    Brick bricks[BRICK_COUNT];
+    Phase phase;
+    int lives;
     int score;
-    int isGameOver;
-    int firstShot;
-}GameState;
+    int combo;
+    int remaining;
+} Game;
 
+static const Color BACKGROUND = {8, 9, 26, 255};
+static const Color PANEL = {18, 22, 48, 255};
+static const Color CYAN = {30, 235, 242, 255};
+static const Color NEON_PINK = {255, 57, 166, 255};
+static const Color TEXT = {224, 240, 255, 255};
+static const Color MUTED = {126, 145, 177, 255};
 
-typedef struct{
-
-    Paddle paddle;
-    Ball ball;
-
-    Brick bricks[BRICK_ROWS][BRICK_COLUMNS];
-
-    GameState gameState;
-}Objects;
-
-typedef struct{
-
-
-    Vector2 paddleSize;    
-    float paddleSpeed;
-
-    Color paddleColor; 
-
-    Vector2 ballVel;
-    Vector2 ballAccel;
-
-    float ballRadius;
-    Color ballColor;
-   
-    int scorePerBrick;
-    int playerLives;
-
-}Config;
-
-
-
-
-
-/* ================= FUNCTION PROTOTYPES ==================== */
-
-void drawObjects(Objects *objs);
-void drawGameThingies(GameState *gameState);
-void setObjects(Objects *objs, Config *cfg);
-void gameOverScreen(void);
-
-void resolveCollisions(Objects *objs);
-void updatePositions(Objects *objs, float dT);
-
-int setupEnv(void);
-float paddleBounceFunction(float x);
-
-Color randColor(void);
-
-
-/* ============ MAIN ============= */
+void resetGame(Game *game);
+void attachBall(Game *game);
+void updateGame(Game *game, float dt);
+void updateBall(Game *game, float dt);
+void collideBricks(Game *game);
+void drawGame(const Game *game);
+void drawCentered(const char *text, int y, int size, Color color);
 
 int main(void)
 {
+    if (VSYNC) { SetConfigFlags(FLAG_VSYNC_HINT | FLAG_MSAA_4X_HINT); }
+    else { SetConfigFlags(FLAG_MSAA_4X_HINT); }
+    InitWindow(WIDTH, HEIGHT, "NeurOS | Breakout");
+    if (!IsWindowReady()) { fprintf(stderr, "Could not open the game window.\n"); return(-1); }
+    if (!VSYNC) { SetTargetFPS((FPS > 0 && FPS <= 300) ? FPS : 120); }
 
-    printf("C'mon I have to start with a printf right\n");
-    srand(time(NULL));
-
-    if(setupEnv()) { printf("We fucked\n"); return(-53); }
-
-
-    Objects objs = { 0 };
-    
-    Config cfg = {
-        .paddleSize = (Vector2){WIDTH/5, HEIGHT/50},
-        .paddleSpeed = WIDTH/4,   //Pixel/s
-        .paddleColor = WHITE,
-
-
-        .ballRadius = WIDTH/80,
-        .ballVel = (Vector2){0,3*HEIGHT/10},
-        .ballAccel = (Vector2){ 0 },
-        .ballColor = WHITE,
-    
-        .playerLives = 3,
-        .scorePerBrick = 100,
-    };
-
-    setObjects(&objs, &cfg);
-
-
-    float dT = 0.0f;
-    float accumulator = 0.0f; // Substeps reduce collision tunneling.
-    const float sliceTime = 1.0f / 240.0f;
-
+    Game game = {0};
+    resetGame(&game);
+    float accumulator = 0.0f;
 
     while (!WindowShouldClose()) {
-        
-        dT = GetFrameTime();
-        
-        if (dT > 0.1f) { dT = 0.1f; }
+        float dt = GetFrameTime();
+        if (dt > 0.1f) { dt = 0.1f; }
 
-        if (IsKeyPressed(KEY_ESCAPE)) { break;}
-        if(IsKeyDown(KEY_A)) { objs.paddle.pos.x -= dT*objs.paddle.speed.x; }
-        if(IsKeyDown(KEY_D)) { objs.paddle.pos.x += dT*objs.paddle.speed.x; }
-        if (IsKeyDown(KEY_SPACE)) { objs.gameState.firstShot = 0; }
-        if (objs.gameState.firstShot) { 
-            objs.ball.pos.x = objs.paddle.pos.x + objs.paddle.size.x/2;
-            objs.ball.pos.y = objs.paddle.pos.y - objs.ball.radius; 
+        if ((game.phase == WON || game.phase == LOST) && IsKeyPressed(KEY_R)) {
+            resetGame(&game);
+            accumulator = 0.0f;
         }
-        // Clamp paddle position
-
-        if (objs.paddle.pos.x < 0) objs.paddle.pos.x = 0;
-        if (objs.paddle.pos.x + objs.paddle.size.x > WIDTH) objs.paddle.pos.x = WIDTH - objs.paddle.size.x;
-
-        // Resolve collisions
-        resolveCollisions(&objs);
-
-        // Physics 
-        
-        accumulator += dT;
-        while (accumulator >= sliceTime) {
-            updatePositions(&objs, sliceTime);
-            resolveCollisions(&objs);
-            
-            accumulator -= sliceTime;
+        else if (IsKeyPressed(KEY_P)) {
+            if (game.phase == PLAYING) { game.phase = PAUSED; }
+            else if (game.phase == PAUSED) { game.phase = PLAYING; }
+            accumulator = 0.0f;
         }
-        
-        // Drawing
+
+        if (game.phase == READY || game.phase == PLAYING) { updateGame(&game, dt); }
+        if (game.phase == PLAYING) {
+            accumulator += dt;
+            while (accumulator >= STEP && game.phase == PLAYING) {
+                updateBall(&game, STEP);
+                accumulator -= STEP;
+            }
+        }
+        else { accumulator = 0.0f; }
+
         BeginDrawing();
-        ClearBackground(BLACK);
-        if (!objs.gameState.isGameOver) {
-        
-            drawObjects(&objs);
-            drawGameThingies(&objs.gameState);
-        }
-        else {
-            gameOverScreen();
-        }
-
+        drawGame(&game);
         EndDrawing();
     }
-
 
     CloseWindow();
     return(0);
 }
 
-
-
-/* ============ FUNCTION BODIES ================ */
-
-int setupEnv(void)
+void resetGame(Game *game)
 {
- 
-    if (VSYNC) {
-        SetConfigFlags(FLAG_VSYNC_HINT | FLAG_MSAA_4X_HINT );    
-    }
-    else {
-        SetConfigFlags(FLAG_MSAA_4X_HINT);
-    }
-    
-    InitWindow(WIDTH, HEIGHT, TITLE);
-
-    if (!IsWindowReady()) { return(-1); }
-
-    if ((FPS < 0 || FPS > 300) && !VSYNC) { SetTargetFPS(120); }
-    else if(!VSYNC){ SetTargetFPS(FPS); }
-
-
-    return(0);
-}
-
-Color randColor(void)
-{
-    static const Color COLOR_PALETTE[COLOR_ARR_SIZE] = {
-    SKY_BLUE,
-    AZURE,
-    ELECTRIC_CYAN,
-    TURQUOISE,
-    NEON_GREEN,
-    EMERALD,
-    LIME_GREEN,
-    YELLOW_GREEN,
-    BRIGHT_YELLOW,
-    GOLDY,
-    AMBER,
-    ORANGEY,
-    CORAL,
-    DEEP_ORANGE,
-    REDISH,
-    MAGENTA_DUH,
-    PINKY,
-    HOT_PINK,
-    SHE_LOVES_PURPLE,
-    SO_DO_I,
-    INDIGO,
-    BLUE_GRAY,
-    SILVER,
-    RED_AF
+    static const Color colors[BRICK_ROWS] = {
+        {255, 57, 166, 255}, {236, 81, 203, 255}, {178, 104, 255, 255},
+        {117, 130, 255, 255}, {45, 181, 255, 255}, {30, 235, 242, 255}
     };
+    const float brickWidth = 80.0f;
+    const float brickHeight = 24.0f;
+    const float gap = 6.0f;
+    const float left = (WIDTH - BRICK_COLUMNS * brickWidth - (BRICK_COLUMNS - 1) * gap) / 2.0f;
 
-    return(COLOR_PALETTE[rand()%COLOR_ARR_SIZE]);
-}
+    *game = (Game){0};
+    game->paddle = (Rectangle){(WIDTH - PADDLE_WIDTH) / 2.0f, 796.0f, PADDLE_WIDTH, PADDLE_HEIGHT};
+    game->lives = 3;
+    game->remaining = BRICK_COUNT;
+    game->phase = READY;
+    attachBall(game);
 
-
-void setObjects(Objects *objs, Config *cfg)
-{
-    
-    // Paddle
-    objs->paddle.size = cfg->paddleSize;
-    objs->paddle.pos = (Vector2){((WIDTH-objs->paddle.size.x)/2), (23*HEIGHT)/25 };
-    objs->paddle.speed.x = cfg->paddleSpeed;
-    objs->paddle.speed.y = 0;
-
-    objs->paddle.color = cfg->paddleColor;
-
-    // Ball
-    objs->ball.radius = cfg->ballRadius;
-    objs->ball.pos.x = objs->paddle.pos.x + (objs->paddle.size.x/2);
-    objs->ball.pos.y = objs->paddle.pos.y - objs->ball.radius;
-    objs->ball.vel = cfg->ballVel;
-    objs->ball.defaultVel = cfg->ballVel;
-    objs->ball.accel = cfg->ballAccel;
-    objs->ball.color = cfg->ballColor;
-
-    objs->gameState = (GameState){cfg->playerLives, 0};
-    objs->gameState.isGameOver = 0;
-    objs->gameState.firstShot = 1;
-
-
-    for (size_t i = 0;i < BRICK_COLUMNS; i++) {
-        for (size_t j = 0; j < BRICK_ROWS; j++) {
-            objs->bricks[j][i].pos = (Vector2){(i+1)*BRICK_LENGTH + X_OFFSET, (j*BRICK_HEIGHT)+Y_OFFSET};
-            objs->bricks[j][i].size = (Vector2){BRICK_LENGTH, BRICK_HEIGHT};
-            objs->bricks[j][i].color = randColor();
-            objs->bricks[j][i].powerUp = 0;
-            objs->bricks[j][i].isDestroyed = 0;
-            
-            if (rand() % 10 == 3) { objs->bricks[j][i].scoreVal = 2*cfg->scorePerBrick; }
-            else{ objs->bricks[j][i].scoreVal = cfg->scorePerBrick; }
+    for (int row = 0; row < BRICK_ROWS; row++) {
+        for (int col = 0; col < BRICK_COLUMNS; col++) {
+            Brick *brick = &game->bricks[row * BRICK_COLUMNS + col];
+            brick->rect = (Rectangle){left + col * (brickWidth + gap), 150.0f + row * (brickHeight + gap), brickWidth, brickHeight};
+            brick->color = colors[row];
+            brick->active = true;
         }
     }
-    return;
 }
 
-void resolveCollisions(Objects *objs)
+void attachBall(Game *game)
 {
-    // Left and right walls
-    if (objs->ball.pos.x - objs->ball.radius <= 0) {
-        objs->ball.pos.x = objs->ball.radius;
-        objs->ball.vel.x *= -1;
-    } 
-    else if (objs->ball.pos.x + objs->ball.radius >= WIDTH) {
-        objs->ball.pos.x = WIDTH - objs->ball.radius;
-        objs->ball.vel.x *= -1;
+    game->ball = (Vector2){game->paddle.x + game->paddle.width / 2.0f, game->paddle.y - BALL_RADIUS - 1.0f};
+    game->velocity = (Vector2){BALL_SPEED * 0.35f, -BALL_SPEED * sqrtf(1.0f - 0.35f * 0.35f)};
+}
+
+void updateGame(Game *game, float dt)
+{
+    int direction = (IsKeyDown(KEY_D) || IsKeyDown(KEY_RIGHT)) - (IsKeyDown(KEY_A) || IsKeyDown(KEY_LEFT));
+    game->paddle.x += direction * PADDLE_SPEED * dt;
+    if (game->paddle.x < 20.0f) { game->paddle.x = 20.0f; }
+    if (game->paddle.x + game->paddle.width > WIDTH - 20.0f) { game->paddle.x = WIDTH - 20.0f - game->paddle.width; }
+
+    if (game->phase == READY) {
+        attachBall(game);
+        if (IsKeyPressed(KEY_SPACE)) { game->phase = PLAYING; }
+    }
+}
+
+void updateBall(Game *game, float dt)
+{
+    game->ball.x += game->velocity.x * dt;
+    game->ball.y += game->velocity.y * dt;
+
+    if (game->ball.x - BALL_RADIUS < 20.0f) {
+        game->ball.x = 20.0f + BALL_RADIUS;
+        game->velocity.x = fabsf(game->velocity.x);
+    }
+    else if (game->ball.x + BALL_RADIUS > WIDTH - 20.0f) {
+        game->ball.x = WIDTH - 20.0f - BALL_RADIUS;
+        game->velocity.x = -fabsf(game->velocity.x);
+    }
+    if (game->ball.y - BALL_RADIUS < 85.0f) {
+        game->ball.y = 85.0f + BALL_RADIUS;
+        game->velocity.y = fabsf(game->velocity.y);
+    }
+    if (game->ball.y - BALL_RADIUS > HEIGHT) {
+        game->lives--;
+        game->combo = 0;
+        if (game->lives == 0) { game->phase = LOST; }
+        else { game->phase = READY; attachBall(game); }
+        return;
     }
 
-    // Top wall
-    if (objs->ball.pos.y - objs->ball.radius <= 0) {
-        objs->ball.pos.y = objs->ball.radius;
-        objs->ball.vel.y *= -1;
+    if (game->velocity.y > 0.0f && CheckCollisionCircleRec(game->ball, BALL_RADIUS, game->paddle)) {
+        float hit = (game->ball.x - (game->paddle.x + game->paddle.width / 2.0f)) / (game->paddle.width / 2.0f);
+        hit = fmaxf(-1.0f, fminf(1.0f, hit));
+        float angle = hit * 65.0f * DEG2RAD;
+        float speed = fminf(BALL_SPEED + game->combo * 8.0f, 650.0f);
+        game->ball.y = game->paddle.y - BALL_RADIUS - 0.01f;
+        game->velocity = (Vector2){sinf(angle) * speed, -cosf(angle) * speed};
+        game->combo = 0;
     }
-    // Bottom wall (life loss)
-    else if (objs->ball.pos.y + objs->ball.radius >= HEIGHT) {
-        objs->gameState.remainingLives--;
-        
-        objs->ball.pos.x = objs->paddle.pos.x + (objs->paddle.size.x / 2.0f);
-        objs->ball.pos.y = objs->paddle.pos.y - objs->ball.radius;
-        objs->ball.vel = objs->ball.defaultVel;
-        objs->gameState.firstShot = 1;
-        if (objs->gameState.remainingLives <= 0) {
-            objs->gameState.isGameOver = 1;
+    collideBricks(game);
+}
+
+void collideBricks(Game *game)
+{
+    for (int i = 0; i < BRICK_COUNT; i++) {
+        Brick *brick = &game->bricks[i];
+        if (!brick->active || !CheckCollisionCircleRec(game->ball, BALL_RADIUS, brick->rect)) { continue; }
+
+        float closestX = fmaxf(brick->rect.x, fminf(game->ball.x, brick->rect.x + brick->rect.width));
+        float closestY = fmaxf(brick->rect.y, fminf(game->ball.y, brick->rect.y + brick->rect.height));
+        float dx = game->ball.x - closestX;
+        float dy = game->ball.y - closestY;
+        if (dx == 0.0f && dy == 0.0f) {
+            float left = game->ball.x - brick->rect.x;
+            float right = brick->rect.x + brick->rect.width - game->ball.x;
+            float top = game->ball.y - brick->rect.y;
+            float bottom = brick->rect.y + brick->rect.height - game->ball.y;
+            float minimum = fminf(fminf(left, right), fminf(top, bottom));
+            if (minimum == left) { dx = -1.0f; }
+            else if (minimum == right) { dx = 1.0f; }
+            else if (minimum == top) { dy = -1.0f; }
+            else { dy = 1.0f; }
         }
-        return; 
+        if (fabsf(dx) > fabsf(dy)) { game->velocity.x = copysignf(fabsf(game->velocity.x), dx); }
+        else { game->velocity.y = copysignf(fabsf(game->velocity.y), dy); }
+
+        brick->active = false;
+        game->remaining--;
+        game->combo++;
+        game->score += 100 * (game->combo < 5 ? game->combo : 5);
+        if (game->remaining == 0) { game->phase = WON; }
+        return;
     }
+}
 
-    Rectangle paddleRect = { objs->paddle.pos.x, objs->paddle.pos.y, objs->paddle.size.x, objs->paddle.size.y };
-    
-    if (CheckCollisionCircleRec(objs->ball.pos, objs->ball.radius, paddleRect)) {
-        objs->ball.pos.y = objs->paddle.pos.y - objs->ball.radius;
-        
-        float ballSpeed = sqrtf((objs->ball.vel.x * objs->ball.vel.x) + (objs->ball.vel.y * objs->ball.vel.y));
-        
-        if (ballSpeed < 0.1f) ballSpeed = 5.0f; 
+void drawCentered(const char *text, int y, int size, Color color)
+{
+    DrawText(text, (WIDTH - MeasureText(text, size)) / 2, y, size, color);
+}
 
-        float relativeHitX = (objs->ball.pos.x - objs->paddle.pos.x) / objs->paddle.size.x;
-        
-        if (relativeHitX < 0.0f) relativeHitX = 0.0f;
-        if (relativeHitX > 1.0f) relativeHitX = 1.0f;
+void drawGame(const Game *game)
+{
+    ClearBackground(BACKGROUND);
+    for (int x = 20; x < WIDTH; x += 80) { DrawLine(x, 85, x, HEIGHT, (Color){18, 23, 48, 255}); }
+    for (int y = 85; y < HEIGHT; y += 80) { DrawLine(20, y, WIDTH - 20, y, (Color){18, 23, 48, 255}); }
+    DrawRectangle(20, 20, WIDTH - 40, 55, PANEL);
+    DrawText("NEUROS // BREAKOUT", 38, 37, 20, CYAN);
+    DrawText(TextFormat("SCORE %06d", game->score), 460, 37, 20, TEXT);
+    DrawText(TextFormat("LIVES %d", game->lives), 780, 37, 20, TEXT);
+    DrawText(TextFormat("BRICKS %02d", game->remaining), 985, 37, 20, TEXT);
+    DrawLine(20, 85, WIDTH - 20, 85, CYAN);
+    DrawLine(20, 85, 20, HEIGHT, CYAN);
+    DrawLine(WIDTH - 20, 85, WIDTH - 20, HEIGHT, CYAN);
 
-        float bounceAngleRad = paddleBounceFunction(relativeHitX);
+    for (int i = 0; i < BRICK_COUNT; i++) {
+        const Brick *brick = &game->bricks[i];
+        if (!brick->active) { continue; }
+        DrawRectangleRec(brick->rect, Fade(brick->color, 0.25f));
+        DrawRectangleLinesEx(brick->rect, 2.0f, brick->color);
+        DrawRectangle((int)brick->rect.x + 5, (int)brick->rect.y + 5, (int)brick->rect.width - 10, 2, Fade(WHITE, 0.35f));
+    }
+    DrawRectangleRec(game->paddle, CYAN);
+    DrawRectangle((int)game->paddle.x + 10, (int)game->paddle.y + 4, (int)game->paddle.width - 20, 3, WHITE);
+    DrawCircleV(game->ball, BALL_RADIUS + 5.0f, Fade(NEON_PINK, 0.2f));
+    DrawCircleV(game->ball, BALL_RADIUS, NEON_PINK);
+    DrawCircleV(game->ball, BALL_RADIUS / 2.0f, WHITE);
 
-        if (bounceAngleRad != -1) {
-            objs->ball.vel.x = cosf(bounceAngleRad) * ballSpeed;
-            objs->ball.vel.y = -sinf(bounceAngleRad) * ballSpeed;
-        } 
+    if (game->combo > 1 && game->phase == PLAYING) { DrawText(TextFormat("COMBO x%d", game->combo < 5 ? game->combo : 5), 38, 100, 20, NEON_PINK); }
+    if (game->phase == READY) {
+        drawCentered("PRESS SPACE TO LAUNCH", 585, 26, TEXT);
+        drawCentered("CHAIN BRICKS FOR UP TO 5X SCORE", 620, 16, MUTED);
+    }
+    else if (game->phase == PAUSED || game->phase == WON || game->phase == LOST) {
+        DrawRectangle(0, 85, WIDTH, HEIGHT - 85, (Color){8, 9, 26, 210});
+        if (game->phase == PAUSED) {
+            drawCentered("PAUSED", 395, 54, CYAN);
+            drawCentered("PRESS P TO RESUME", 465, 20, TEXT);
+        }
         else {
-            objs->ball.vel.y = -fabsf(objs->ball.vel.y);
+            drawCentered(game->phase == WON ? "GRID CLEARED" : "GAME OVER", 375, 54, game->phase == WON ? CYAN : NEON_PINK);
+            drawCentered(TextFormat("FINAL SCORE  %06d", game->score), 450, 24, TEXT);
+            drawCentered("PRESS R TO PLAY AGAIN", 495, 20, TEXT);
         }
     }
-
-    // Find the brick containing the ball's center.
-    int col = (int)((objs->ball.pos.x - X_OFFSET) / BRICK_LENGTH) - 1;
-    int row = (int)((objs->ball.pos.y - Y_OFFSET) / BRICK_HEIGHT);
-
-    if (row >= 0 && row < BRICK_ROWS && col >= 0 && col < BRICK_COLUMNS) {
-        Brick *targetBrick = &objs->bricks[row][col];
-
-        if (!targetBrick->isDestroyed) {
-            Rectangle brickRect = { targetBrick->pos.x, targetBrick->pos.y, targetBrick->size.x, targetBrick->size.y };
-    
-            if (CheckCollisionCircleRec(objs->ball.pos, objs->ball.radius, brickRect)) {
-                targetBrick->isDestroyed = 1;
-                objs->gameState.score += targetBrick->scoreVal; 
-
-                float overlapLeft   = (objs->ball.pos.x - targetBrick->pos.x);
-                float overlapRight  = (targetBrick->pos.x + targetBrick->size.x) - objs->ball.pos.x;
-                float overlapTop    = (objs->ball.pos.y - targetBrick->pos.y);
-                float overlapBottom = (targetBrick->pos.y + targetBrick->size.y) - objs->ball.pos.y;
-
-                float minOverlap = overlapLeft;
-                int side = 0;
-
-                if (overlapRight < minOverlap)  { minOverlap = overlapRight;  side = 1; }
-                if (overlapTop < minOverlap)    { minOverlap = overlapTop;    side = 2; }
-                if (overlapBottom < minOverlap) { minOverlap = overlapBottom; side = 3; }
-
-                switch (side){     
-                    case 0:
-                        objs->ball.pos.x = targetBrick->pos.x - objs->ball.radius;
-                        objs->ball.vel.x = -fabsf(objs->ball.vel.x); 
-                        break;
-                    
-                    case 1:
-                        objs->ball.pos.x = targetBrick->pos.x + targetBrick->size.x + objs->ball.radius;
-                        objs->ball.vel.x = fabsf(objs->ball.vel.x);
-                        break;
-
-                    case 2:
-                        objs->ball.pos.y = targetBrick->pos.y - objs->ball.radius;
-                        objs->ball.vel.y = -fabsf(objs->ball.vel.y);
-                        break;
-                        
-                    case 3:
-                        objs->ball.pos.y = targetBrick->pos.y + targetBrick->size.y + objs->ball.radius;
-                        objs->ball.vel.y = fabsf(objs->ball.vel.y);
-                        break;
-                    
-                    default:
-                        break;
-                }
-            }
-        }
-    }
-}
-
-
-void drawObjects(Objects *objs) {
-
-    for (size_t i = 0; i < BRICK_COLUMNS; i++) {
-        for (size_t j = 0; j < BRICK_ROWS; j++) {
-            if (objs->bricks[j][i].isDestroyed) {
-                continue;
-            }
-            DrawRectangleV(objs->bricks[j][i].pos, objs->bricks[j][i].size, objs->bricks[j][i].color);
-            DrawRectangleLinesEx(
-            (Rectangle){objs->bricks[j][i].pos.x,objs->bricks[j][i].pos.y, objs->bricks[j][i].size.x, objs->bricks[j][i].size.y}, 
-            3.5f, 
-            BLACK);
-        }
-    }
-    DrawRectangleV(objs->paddle.pos, objs->paddle.size, objs->paddle.color);
-    DrawCircleV(objs->ball.pos, objs->ball.radius , objs->ball.color);
-
-}
-
-/* Map a normalized paddle hit position to a bounce angle in radians. */
-float paddleBounceFunction(float x)
-{
-    if (x < 0.0f || x > 1.0f) {
-        return(-1);
-    }
-
-    float y = 150.0f-(120.0f*x);
-    float rad = DEG2RAD*y;
-
-    return(rad);
-}
-
-
-void updatePositions(Objects *objs, float dT)
-{
-
-    if (objs->gameState.remainingLives <= 0) { return; }
-
-    objs->ball.pos.x += objs->ball.vel.x * dT;
-    objs->ball.pos.y += objs->ball.vel.y * dT;
-    
-    objs->ball.vel.x += objs->ball.accel.x * dT;
-    objs->ball.vel.y += objs->ball.accel.y * dT;
-}
-
-
-void gameOverScreen(void)
-{
-    DrawText("GAME OVER", (WIDTH*1.1f)/3 , (1.2*HEIGHT)/3 , 53.0f, WHITE);
-    DrawText("YOU sux", WIDTH/2, 2*HEIGHT/3 , 13.0f, WHITE);
-    DrawText("Press ESC to quit(there is no replay button)", 10, 10, 20, WHITE);
-}
-
-void drawGameThingies(GameState *gameState)
-{
-    const char *txt = TextFormat("Remaining Lives : %d ",gameState->remainingLives);
-    const char *score = TextFormat("Score: %d",gameState->score);
-    DrawText("A/D : Left/Right", 10, 10, 15, CLITERAL(Color){255,255,255,155});
-    DrawText("Space: Launch the ball", 10, 25, 15, CLITERAL(Color){255,255,255,155});
-    DrawText(txt, 10, 40, 15, CLITERAL(Color){255,255,255,155});
-    DrawText(score, 10, HEIGHT-30, 15 , CLITERAL(Color){255,255,255,155});
+    DrawText("A / D OR ARROWS: MOVE    SPACE: LAUNCH    P: PAUSE    ESC: QUIT", 38, 860, 16, MUTED);
 }
