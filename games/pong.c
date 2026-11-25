@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <time.h>
 #include <raylib.h>
+#include "../shared/neuros_effect.c"
+#include "../shared/neuros_audio.c"
 
 #define WIDTH 1200
 #define HEIGHT 900
@@ -75,12 +77,16 @@ int main(void)
     if (!IsWindowReady()) { fprintf(stderr, "Could not open the game window.\n"); return(-1); }
     if (!VSYNC) { SetTargetFPS((FPS > 0 && FPS <= 300) ? FPS : 120); }
 
+    initNeurosAudio();
+    NeurosEffect effect = loadNeurosEffect(WIDTH, HEIGHT, 0.55f, (Vector3){0.20f, 0.93f, 0.66f});
     Game game = {0};
     game.dashed = true;
     resetMatch(&game);
     float accumulator = 0.0f;
 
     while (!WindowShouldClose()) {
+        if (IsKeyPressed(KEY_M)) { toggleNeurosAudio(); }
+        if (IsKeyPressed(KEY_F) && effect.ready) { effect.enabled = !effect.enabled; }
         float dt = GetFrameTime();
         if (dt > 0.1f) { dt = 0.1f; }
         if (IsKeyPressed(KEY_TAB)) { game.theme = (game.theme + 1) % (int)(sizeof(THEMES) / sizeof(THEMES[0])); }
@@ -88,6 +94,10 @@ int main(void)
         if (game.winner && IsKeyPressed(KEY_R)) { resetMatch(&game); accumulator = 0.0f; }
         if (!game.winner && IsKeyPressed(KEY_P)) { game.paused = !game.paused; accumulator = 0.0f; }
 
+        int previousScore = game.leftScore + game.rightScore;
+        int previousWinner = game.winner;
+        int previousRally = game.rally;
+        Vector2 previousVelocity = game.velocity;
         if (!game.winner && !game.paused) {
             movePaddles(&game, dt);
             if (game.serveTimer > 0.0f) {
@@ -105,10 +115,16 @@ int main(void)
         }
         else { accumulator = 0.0f; }
 
-        BeginDrawing();
+        if (game.winner && !previousWinner) { playNeurosSound(SOUND_WIN); }
+        else if (game.leftScore + game.rightScore > previousScore) { playNeurosSound(SOUND_SCORE); }
+        else if (game.rally > previousRally || game.velocity.y * previousVelocity.y < 0.0f) { playNeurosSound(SOUND_HIT); }
+
+        beginNeurosEffect(&effect);
         drawGame(&game);
-        EndDrawing();
+        endNeurosEffect(&effect);
     }
+    unloadNeurosAudio();
+    unloadNeurosEffect(&effect);
     CloseWindow();
     return(0);
 }
@@ -197,6 +213,7 @@ void drawGame(const Game *game)
     DrawRectangle(20, 20, WIDTH - 40, 55, theme.panel);
     DrawText("NEUROS // PONG", 38, 37, 20, theme.left);
     DrawText("FIRST TO 7", WIDTH / 2 - MeasureText("FIRST TO 7", 20) / 2, 37, 20, theme.text);
+    if (neurosAudio.muted || !neurosAudio.ready) { DrawText("SOUND OFF", 820, 37, 16, theme.muted); }
     DrawText(TextFormat("RALLY %02d", game->rally), 1030, 37, 20, theme.muted);
     DrawLine(0, (int)FIELD_TOP, WIDTH, (int)FIELD_TOP, theme.muted);
     DrawLine(0, (int)FIELD_BOTTOM, WIDTH, (int)FIELD_BOTTOM, theme.muted);
@@ -228,5 +245,5 @@ void drawGame(const Game *game)
             drawCentered("PRESS R TO REMATCH", 500, 20, theme.text);
         }
     }
-    DrawText("P1: W / S    P2: UP / DOWN    P: PAUSE    TAB: THEME    E: CENTER LINE    ESC: QUIT", 38, 860, 16, theme.muted);
+    DrawText("P1: W / S    P2: UP / DOWN    P: PAUSE    TAB: THEME    E: LINE    F: FX    M: SOUND    ESC: QUIT", 38, 860, 16, theme.muted);
 }

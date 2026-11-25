@@ -2,6 +2,8 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <raylib.h>
+#include "../shared/neuros_effect.c"
+#include "../shared/neuros_audio.c"
 
 #define WIDTH 1200
 #define HEIGHT 900
@@ -72,11 +74,15 @@ int main(void)
     if (!IsWindowReady()) { fprintf(stderr, "Could not open the game window.\n"); return(-1); }
     if (!VSYNC) { SetTargetFPS((FPS > 0 && FPS <= 300) ? FPS : 120); }
 
+    initNeurosAudio();
+    NeurosEffect effect = loadNeurosEffect(WIDTH, HEIGHT, 0.65f, (Vector3){0.66f, 0.36f, 0.99f});
     Game game = {0};
     resetGame(&game);
     float accumulator = 0.0f;
 
     while (!WindowShouldClose()) {
+        if (IsKeyPressed(KEY_M)) { toggleNeurosAudio(); }
+        if (IsKeyPressed(KEY_F) && effect.ready) { effect.enabled = !effect.enabled; }
         float dt = GetFrameTime();
         if (dt > 0.1f) { dt = 0.1f; }
 
@@ -90,6 +96,10 @@ int main(void)
             accumulator = 0.0f;
         }
 
+        int previousBricks = game.remaining;
+        int previousLives = game.lives;
+        Phase previousPhase = game.phase;
+        Vector2 previousVelocity = game.velocity;
         if (game.phase == READY || game.phase == PLAYING) { updateGame(&game, dt); }
         if (game.phase == PLAYING) {
             accumulator += dt;
@@ -100,11 +110,20 @@ int main(void)
         }
         else { accumulator = 0.0f; }
 
-        BeginDrawing();
+        if (game.phase == WON && previousPhase != WON) { playNeurosSound(SOUND_WIN); }
+        else if (game.phase == LOST && previousPhase != LOST) { playNeurosSound(SOUND_LOSE); }
+        else if (game.lives < previousLives) { playNeurosSound(SOUND_LOSE); }
+        else if (game.remaining < previousBricks) { playNeurosSound(SOUND_SCORE); }
+        else if (previousPhase == PLAYING && game.phase == PLAYING &&
+                 (game.velocity.x * previousVelocity.x < 0.0f || game.velocity.y * previousVelocity.y < 0.0f)) { playNeurosSound(SOUND_HIT); }
+
+        beginNeurosEffect(&effect);
         drawGame(&game);
-        EndDrawing();
+        endNeurosEffect(&effect);
     }
 
+    unloadNeurosAudio();
+    unloadNeurosEffect(&effect);
     CloseWindow();
     return(0);
 }
@@ -240,6 +259,7 @@ void drawGame(const Game *game)
     DrawText("NEUROS // BREAKOUT", 38, 37, 20, CYAN);
     DrawText(TextFormat("SCORE %06d", game->score), 460, 37, 20, TEXT);
     DrawText(TextFormat("LIVES %d", game->lives), 780, 37, 20, TEXT);
+    if (neurosAudio.muted || !neurosAudio.ready) { DrawText("SOUND OFF", 600, 63, 12, MUTED); }
     DrawText(TextFormat("BRICKS %02d", game->remaining), 985, 37, 20, TEXT);
     DrawLine(20, 85, WIDTH - 20, 85, CYAN);
     DrawLine(20, 85, 20, HEIGHT, CYAN);
@@ -275,5 +295,5 @@ void drawGame(const Game *game)
             drawCentered("PRESS R TO PLAY AGAIN", 495, 20, TEXT);
         }
     }
-    DrawText("A / D OR ARROWS: MOVE    SPACE: LAUNCH    P: PAUSE    ESC: QUIT", 38, 860, 16, MUTED);
+    DrawText("A / D OR ARROWS: MOVE    SPACE: LAUNCH    P: PAUSE    F: FX    M: SOUND    ESC: QUIT", 38, 860, 16, MUTED);
 }

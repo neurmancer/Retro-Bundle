@@ -16,12 +16,21 @@
 
 - Pong
 - Breakout
+- Tetris
 
 
 ## Up-coming Games
 
 - Galaga
-- Tetris
 
 
 ## Game Details
+
+### Tetris
+
+Build with a C compiler, raylib, and pkg-config installed:
+
+```sh
+cc -std=c11 -Wall -Wextra -Wpedantic games/tetris.c -o tetris $(pkg-config --cflags --libs raylib) -lm
+./tetris
+```
