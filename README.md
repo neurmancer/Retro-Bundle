@@ -20,6 +20,7 @@
 - Partially Physically Accurate Galaga
 - 2048
 - Blackjack
+- Overdrive
 
 ## Up-coming Games
 
@@ -49,6 +50,10 @@ Executables are placed in `bins/`; use `make bins/blackjack` (or another game na
 ### Tetris
 
 Stack blocks and clear lines.
+
+### Overdrive
+
+> Yeah I stole the retrowave idea and make a worse copy of it I'm not a fucking game dev + We have doppler lol
 
 ### Blackjack
 

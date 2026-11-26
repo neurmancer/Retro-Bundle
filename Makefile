@@ -19,9 +19,10 @@ bins:
 vpath %.c games $(sort $(dir $(wildcard games/*/*.c)))
 
 bins/%: %.c $(SHARED_SOURCES) | bins
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(RAYLIB_CFLAGS) $(LDFLAGS) $< $(if $(filter galaga,$*),physics/doppler.c) -o $@ $(RAYLIB_LIBS) $(LDLIBS) -lm
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(RAYLIB_CFLAGS) $(LDFLAGS) $< $(if $(filter galaga overdrive,$*),physics/doppler.c) -o $@ $(RAYLIB_LIBS) $(LDLIBS) -lm
 
 bins/galaga: physics/doppler.c physics/doppler.h
+bins/overdrive: $(wildcard games/overdrive/code/*.c) physics/doppler.c physics/doppler.h
 
 clean:
 	rm -f $(BINARIES)

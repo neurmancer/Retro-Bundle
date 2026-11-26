@@ -1,6 +1,6 @@
 # Doppler engine
 
-A headless C library for computing retarded wave observations. It has no Raylib dependency and is not yet connected to the games. Include `doppler.h` and link `doppler.c` with the math library.
+A headless C library for computing retarded wave observations. It has no Raylib dependency and is used by Galaga and Overdrive. Include `doppler.h` and link `doppler.c` with the math library.
 
 ```sh
 cc -std=c11 -Wall -Wextra -Wpedantic -Werror physics/doppler.c tests/doppler_test.c -lm -o /tmp/doppler-test
