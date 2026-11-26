@@ -7,6 +7,7 @@
 #include "../shared/neuros_effect.c"
 #include "../shared/neuros_start.c"
 #include "../shared/neuros_audio.c"
+#include "../shared/neuros_visual.c"
 
 #define WIDTH 1200
 #define HEIGHT 900
@@ -103,7 +104,7 @@ int main(void)
         if (showTitle) {
             if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_KP_ENTER)) { showTitle = false; }
             beginNeurosEffect(&effect);
-            drawArcadeStart(ARCADE_TETRIS);
+            drawRetroStart(ARCADE_TETRIS);
             endNeurosEffect(&effect);
             continue;
         }
@@ -308,9 +309,11 @@ void drawBlock(int x, int y, int size, Color color, bool ghost)
 {
     Rectangle rect = {(float)x + 1, (float)y + 1, (float)size - 2, (float)size - 2};
     if (ghost) { DrawRectangleLinesEx(rect, 2.0f, Fade(color, 0.55f)); return; }
-    DrawRectangleRec(rect, Fade(color, 0.30f));
-    DrawRectangleLinesEx(rect, 2.0f, color);
-    DrawRectangle(x + 5, y + 5, size - 10, 3, Fade(WHITE, 0.48f));
+    DrawRectangleRec(rect, color);
+    DrawRectangle(x + 4, y + 4, size - 8, 3, Fade(WHITE, 0.5f));
+    DrawRectangle(x + 4, y + 4, 3, size - 8, Fade(WHITE, 0.3f));
+    DrawRectangle(x + 4, y + size - 7, size - 8, 3, Fade(BLACK, 0.45f));
+    DrawRectangle(x + size - 7, y + 4, 3, size - 8, Fade(BLACK, 0.35f));
 }
 
 void drawPreview(int type, int x, int y)
@@ -346,8 +349,8 @@ void drawCentered(const char *text, int x, int y, int width, int size, Color col
 
 void drawGame(const Game *game)
 {
-    ClearBackground(BACKGROUND);
-    DrawRectangle(20, 18, WIDTH - 40, 48, PANEL);
+    drawNeurosBackdrop(WIDTH, HEIGHT, BACKGROUND, NEON_VIOLET);
+    drawNeurosPanel((Rectangle){20, 18, WIDTH - 40, 48}, PANEL, MINT);
     DrawText("NEUROS // TETRIS", 38, 32, 20, MINT);
     DrawText("BLOCK STACKING PROTOCOL", 880, 34, 14, MUTED);
     if (neurosAudio.muted || !neurosAudio.ready) { DrawText("SOUND OFF", 720, 34, 14, MUTED); }
@@ -355,7 +358,6 @@ void drawGame(const Game *game)
     DrawRectangle(BOARD_X, BOARD_Y, BOARD_WIDTH * CELL_SIZE, BOARD_HEIGHT * CELL_SIZE, BACKGROUND);
     for (int y = 0; y < BOARD_HEIGHT; y++) {
         for (int x = 0; x < BOARD_WIDTH; x++) {
-            DrawRectangleLines(BOARD_X + x * CELL_SIZE, BOARD_Y + y * CELL_SIZE, CELL_SIZE, CELL_SIZE, (Color){24, 35, 52, 255});
             int cell = game->board[y][x];
             if (cell) { drawBlock(BOARD_X + x * CELL_SIZE, BOARD_Y + y * CELL_SIZE, CELL_SIZE, PIECE_COLORS[cell - 1], false); }
         }
@@ -373,19 +375,22 @@ void drawGame(const Game *game)
             }
         }
     }
-    DrawRectangleLinesEx((Rectangle){BOARD_X - 4, BOARD_Y - 4, BOARD_WIDTH * CELL_SIZE + 8, BOARD_HEIGHT * CELL_SIZE + 8}, 2.0f, NEON_VIOLET);
-    DrawRectangle(190, 85, 190, 160, PANEL);
+    drawNeurosCorners((Rectangle){BOARD_X - 4, BOARD_Y - 4, BOARD_WIDTH * CELL_SIZE + 8, BOARD_HEIGHT * CELL_SIZE + 8}, NEON_VIOLET);
+    drawNeurosPanel((Rectangle){190, 85, 190, 160}, PANEL, MINT);
     DrawText("HOLD", 207, 101, 20, MINT);
     drawPreview(game->held, 195, 130);
     if (game->holdUsed) { DrawText("USED", 207, 220, 14, MUTED); }
-    DrawRectangle(820, 85, 190, 160, PANEL);
+    drawNeurosPanel((Rectangle){820, 85, 190, 160}, PANEL, MINT);
     DrawText("NEXT", 837, 101, 20, MINT);
     drawPreview(game->next, 825, 130);
-    DrawRectangle(820, 265, 190, 180, PANEL);
+    drawNeurosPanel((Rectangle){820, 265, 190, 180}, PANEL, MINT);
     DrawText("SCORE", 837, 282, 16, MUTED);
     DrawText(TextFormat("%08d", game->score), 837, 307, 24, TEXT);
     DrawText(TextFormat("LINES  %d", game->lines), 837, 350, 19, TEXT);
     DrawText(TextFormat("LEVEL  %d", game->level), 837, 387, 19, TEXT);
+    for (int i = 0; i < 10; i++) {
+        DrawRectangle(837 + i * 15, 420, 10, 5, i < game->lines % 10 ? MINT : Fade(MUTED, 0.22f));
+    }
     DrawText("CONTROLS", 190, 294, 20, NEON_VIOLET);
     DrawText("LEFT / RIGHT  MOVE", 190, 335, 16, TEXT);
     DrawText("UP / X        ROTATE", 190, 365, 16, TEXT);

@@ -8,6 +8,7 @@
 #include "../shared/neuros_effect.c"
 #include "../shared/neuros_start.c"
 #include "../shared/neuros_audio.c"
+#include "../shared/neuros_visual.c"
 
 #define WIDTH 1200
 #define HEIGHT 900
@@ -87,7 +88,7 @@ int main(void)
         if (showTitle) {
             if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_KP_ENTER)) { showTitle = false; }
             beginNeurosEffect(&effect);
-            drawArcadeStart(ARCADE_2048);
+            drawRetroStart(ARCADE_2048);
             endNeurosEffect(&effect);
             continue;
         }
@@ -239,37 +240,43 @@ void drawCentered(const char *text, int x, int y, int width, int size, Color col
 
 void drawGame(const Game *game)
 {
-    ClearBackground(BACKGROUND);
-    DrawRectangle(20, 18, WIDTH - 40, 52, PANEL);
+    drawNeurosBackdrop(WIDTH, HEIGHT, BACKGROUND, MINT);
+    drawNeurosPanel((Rectangle){20, 18, WIDTH - 40, 52}, PANEL, MINT);
     DrawText("NEUROS // 2048", 38, 34, 20, MINT);
     DrawText("MERGE PROTOCOL", 960, 36, 16, MUTED);
     DrawText("2048", BOARD_X, 92, 44, TEXT);
     DrawText("COMBINE. UPGRADE. REPEAT.", BOARD_X + 155, 113, 15, MUTED);
-    DrawRectangle(45, 165, 215, 115, PANEL);
+    drawNeurosPanel((Rectangle){45, 165, 215, 115}, PANEL, MINT);
     DrawText("SCORE", 62, 183, 16, MUTED);
     DrawText(TextFormat("%" PRIu64, game->board.score), 62, 215, 27, TEXT);
-    DrawRectangle(45, 296, 215, 115, PANEL);
+    drawNeurosPanel((Rectangle){45, 296, 215, 115}, PANEL, MINT);
     DrawText("SESSION BEST", 62, 314, 16, MUTED);
     DrawText(TextFormat("%" PRIu64, game->best), 62, 346, 27, TEXT);
+    drawNeurosPanel((Rectangle){45, 427, 215, 82}, PANEL, NEON_VIOLET);
+    DrawText("UNDO BUFFER", 62, 444, 15, MUTED);
+    DrawText(game->canUndo ? "READY" : "EMPTY", 62, 470, 18, game->canUndo ? MINT : MUTED);
     DrawRectangle(BOARD_X, BOARD_Y, BOARD_SIZE, BOARD_SIZE, PANEL);
-    DrawRectangleLinesEx((Rectangle){BOARD_X, BOARD_Y, BOARD_SIZE, BOARD_SIZE}, 2.0f, NEON_VIOLET);
+    drawNeurosCorners((Rectangle){BOARD_X - 3, BOARD_Y - 3, BOARD_SIZE + 6, BOARD_SIZE + 6}, NEON_VIOLET);
     for (int y = 0; y < GRID; y++) {
         for (int x = 0; x < GRID; x++) {
             int px = BOARD_X + GAP + x * (CELL + GAP);
             int py = BOARD_Y + GAP + y * (CELL + GAP);
             uint64_t value = game->board.cells[y][x];
-            if (value == 0) { DrawRectangle(px, py, CELL, CELL, (Color){29, 40, 57, 255}); continue; }
+            if (value == 0) {
+                DrawRectangle(px, py, CELL, CELL, (Color){27, 34, 51, 255});
+                continue;
+            }
             Color color = tileColor(value);
-            DrawRectangle(px, py, CELL, CELL, Fade(color, 0.18f));
-            DrawRectangleLinesEx((Rectangle){px, py, CELL, CELL}, 2.0f, color);
-            DrawRectangle(px + 8, py + 8, CELL - 16, 3, Fade(color, 0.7f));
+            DrawRectangle(px, py, CELL, CELL, color);
+            DrawRectangle(px + 5, py + 5, CELL - 10, 4, Fade(WHITE, 0.5f));
+            DrawRectangle(px + 5, py + CELL - 9, CELL - 10, 4, Fade(BLACK, 0.35f));
             const char *label = TextFormat("%" PRIu64, value);
             int fontSize = 46;
             while (fontSize > 12 && MeasureText(label, fontSize) > CELL - 12) { fontSize -= 2; }
-            drawCentered(label, px, py + (CELL - fontSize) / 2, CELL, fontSize, TEXT);
+            drawCentered(label, px, py + (CELL - fontSize) / 2, CELL, fontSize, BACKGROUND);
         }
     }
-    DrawRectangle(945, 165, 210, 320, PANEL);
+    drawNeurosPanel((Rectangle){945, 165, 210, 320}, PANEL, MINT);
     DrawText("CONTROLS", 962, 184, 19, MINT);
     DrawText("ARROWS / WASD", 962, 225, 16, TEXT);
     DrawText("MOVE TILES", 962, 247, 14, MUTED);

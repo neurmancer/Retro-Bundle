@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <string.h>
 #define main blackjack_application_main
-#include "../games/blackjack.c"
+#include "../games/blakjack/blackjack.c"
 #undef main
 
 static void setupDeal(Game *game, int p1, int d1, int p2, int d2, int next)

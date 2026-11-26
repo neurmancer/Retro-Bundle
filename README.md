@@ -18,7 +18,8 @@
 - Breakout
 - Tetris
 - Partially Physically Accurate Galaga
-- 2048 
+- 2048
+- Blackjack
 
 ## Up-coming Games
 
@@ -30,24 +31,24 @@
 - [Tetris](#tetris)
 - [Blackjack](#blackjack)
 
+### Building and running
+
+Install a C compiler, `make`, `pkg-config`, and raylib, then build all games:
+
+```sh
+make
+./bins/pong
+```
+
+Executables are placed in `bins/`; use `make bins/blackjack` (or another game name) to build one game and `make clean` to remove the built executables. The games locate their resources relative to the repository and the executable, so keep `bins/`, `games/`, and `shaders/` together.
+
 ### Galaga
 
 > Well...it's partially phsyically accurate lol
 
-build that bad boy with:  
-```sh
-cc -std=c11 -Wall -Wextra -Wpedantic games/galaga.c physics/doppler.c \                                 ❮❮
-                  -o galaga $(pkg-config --cflags --libs raylib) -lm
-```
-
 ### Tetris
 
-Build with a C compiler, raylib, and pkg-config installed:
-
-```sh
-cc -std=c11 -Wall -Wextra -Wpedantic games/tetris.c -o tetris $(pkg-config --cflags --libs raylib) -lm
-./tetris
-```
+Stack blocks and clear lines.
 
 ### Blackjack
 

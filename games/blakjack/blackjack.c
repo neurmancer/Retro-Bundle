@@ -6,9 +6,9 @@
 #include <stdlib.h>
 #include <time.h>
 #include <raylib.h>
-#include "../shared/neuros_effect.c"
-#include "../shared/neuros_start.c"
-#include "../shared/neuros_audio.c"
+#include "../../shared/neuros_effect.c"
+#include "../../shared/neuros_start.c"
+#include "../../shared/neuros_audio.c"
 
 #define WIDTH 1200
 #define HEIGHT 900
@@ -164,7 +164,7 @@ Font loadCasinoFont(const char *name)
     char local[256];
     char executable[1024];
     char parent[1024];
-    snprintf(local, sizeof(local), "assets/blackjack/fonts/%s", name);
+    snprintf(local, sizeof(local), "games/blakjack/assetts/fonts/%s", name);
     snprintf(executable, sizeof(executable), "%s%s", GetApplicationDirectory(), local);
     snprintf(parent, sizeof(parent), "%s../%s", GetApplicationDirectory(), local);
     const char *path = NULL;
@@ -732,7 +732,7 @@ Texture2D loadCardTexture(const char *name)
     char relative[256];
     char executable[1024];
     char parent[1024];
-    snprintf(relative, sizeof(relative), "assets/blackjack/%s", name);
+    snprintf(relative, sizeof(relative), "games/blakjack/assetts/%s", name);
     snprintf(executable, sizeof(executable), "%s%s", GetApplicationDirectory(), relative);
     snprintf(parent, sizeof(parent), "%s../%s", GetApplicationDirectory(), relative);
     const char *path = NULL;

@@ -7,6 +7,7 @@
 #include "../shared/neuros_effect.c"
 #include "../shared/neuros_start.c"
 #include "../shared/neuros_audio.c"
+#include "../shared/neuros_visual.c"
 
 #define WIDTH 1200
 #define HEIGHT 900
@@ -93,7 +94,7 @@ int main(void)
         if (showTitle) {
             if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_KP_ENTER)) { showTitle = false; }
             beginNeurosEffect(&effect);
-            drawArcadeStart(ARCADE_PONG);
+            drawRetroStart(ARCADE_PONG);
             endNeurosEffect(&effect);
             continue;
         }
@@ -217,28 +218,23 @@ void drawCentered(const char *text, int y, int size, Color color)
 void drawGame(const Game *game)
 {
     Theme theme = THEMES[game->theme];
-    ClearBackground(theme.background);
-    for (int x = 0; x < WIDTH; x += 80) { DrawLine(x, (int)FIELD_TOP, x, (int)FIELD_BOTTOM, theme.grid); }
-    for (int y = (int)FIELD_TOP; y < FIELD_BOTTOM; y += 80) { DrawLine(0, y, WIDTH, y, theme.grid); }
-    DrawRectangle(20, 20, WIDTH - 40, 55, theme.panel);
+    drawNeurosBackdrop(WIDTH, HEIGHT, theme.background, theme.left);
+    drawNeurosPanel((Rectangle){20, 20, WIDTH - 40, 55}, theme.panel, theme.left);
     DrawText("NEUROS // PONG", 38, 37, 20, theme.left);
     DrawText("FIRST TO 7", WIDTH / 2 - MeasureText("FIRST TO 7", 20) / 2, 37, 20, theme.text);
     if (neurosAudio.muted || !neurosAudio.ready) { DrawText("SOUND OFF", 820, 37, 16, theme.muted); }
     DrawText(TextFormat("RALLY %02d", game->rally), 1030, 37, 20, theme.muted);
-    DrawLine(0, (int)FIELD_TOP, WIDTH, (int)FIELD_TOP, theme.muted);
+    DrawLine(0, (int)FIELD_TOP, WIDTH, (int)FIELD_TOP, Fade(theme.left, 0.5f));
     DrawLine(0, (int)FIELD_BOTTOM, WIDTH, (int)FIELD_BOTTOM, theme.muted);
 
     if (game->dashed) {
         for (int y = (int)FIELD_TOP + 15; y < FIELD_BOTTOM - 15; y += 38) { DrawRectangle(WIDTH / 2 - 2, y, 4, 20, theme.muted); }
     }
-    const char *leftScore = TextFormat("%d", game->leftScore);
-    DrawText(leftScore, WIDTH / 4 - MeasureText(leftScore, 64) / 2, 125, 64, Fade(theme.left, 0.7f));
-    const char *rightScore = TextFormat("%d", game->rightScore);
-    DrawText(rightScore, 3 * WIDTH / 4 - MeasureText(rightScore, 64) / 2, 125, 64, Fade(theme.right, 0.7f));
+    drawNeurosDigit(game->leftScore, WIDTH / 4 - 20, 125, 8, theme.left);
+    drawNeurosDigit(game->rightScore, 3 * WIDTH / 4 - 20, 125, 8, theme.right);
     DrawRectangleRec(game->left, theme.left);
     DrawRectangleRec(game->right, theme.right);
-    DrawCircleV(game->ball, BALL_RADIUS + 6.0f, Fade(theme.text, 0.2f));
-    DrawCircleV(game->ball, BALL_RADIUS, theme.text);
+    drawNeurosOrb(game->ball, BALL_RADIUS, theme.text);
 
     if (!game->winner && !game->paused && game->serveTimer > 0.0f) {
         drawCentered(game->serveDirection < 0 ? "SERVING TO PLAYER 1" : "SERVING TO PLAYER 2", 535, 20, theme.muted);

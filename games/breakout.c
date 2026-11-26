@@ -5,6 +5,7 @@
 #include "../shared/neuros_effect.c"
 #include "../shared/neuros_start.c"
 #include "../shared/neuros_audio.c"
+#include "../shared/neuros_visual.c"
 
 #define WIDTH 1200
 #define HEIGHT 900
@@ -89,7 +90,7 @@ int main(void)
         if (showTitle) {
             if (IsKeyPressed(KEY_ENTER) || IsKeyPressed(KEY_KP_ENTER)) { showTitle = false; }
             beginNeurosEffect(&effect);
-            drawArcadeStart(ARCADE_BREAKOUT);
+            drawRetroStart(ARCADE_BREAKOUT);
             endNeurosEffect(&effect);
             continue;
         }
@@ -262,10 +263,8 @@ void drawCentered(const char *text, int y, int size, Color color)
 
 void drawGame(const Game *game)
 {
-    ClearBackground(BACKGROUND);
-    for (int x = 20; x < WIDTH; x += 80) { DrawLine(x, 85, x, HEIGHT, (Color){18, 23, 48, 255}); }
-    for (int y = 85; y < HEIGHT; y += 80) { DrawLine(20, y, WIDTH - 20, y, (Color){18, 23, 48, 255}); }
-    DrawRectangle(20, 20, WIDTH - 40, 55, PANEL);
+    drawNeurosBackdrop(WIDTH, HEIGHT, BACKGROUND, CYAN);
+    drawNeurosPanel((Rectangle){20, 20, WIDTH - 40, 55}, PANEL, CYAN);
     DrawText("NEUROS // BREAKOUT", 38, 37, 20, CYAN);
     DrawText(TextFormat("SCORE %06d", game->score), 460, 37, 20, TEXT);
     DrawText(TextFormat("LIVES %d", game->lives), 780, 37, 20, TEXT);
@@ -278,15 +277,11 @@ void drawGame(const Game *game)
     for (int i = 0; i < BRICK_COUNT; i++) {
         const Brick *brick = &game->bricks[i];
         if (!brick->active) { continue; }
-        DrawRectangleRec(brick->rect, Fade(brick->color, 0.25f));
-        DrawRectangleLinesEx(brick->rect, 2.0f, brick->color);
-        DrawRectangle((int)brick->rect.x + 5, (int)brick->rect.y + 5, (int)brick->rect.width - 10, 2, Fade(WHITE, 0.35f));
+        DrawRectangleRec(brick->rect, brick->color);
+        DrawRectangle((int)brick->rect.x + 4, (int)brick->rect.y + (int)brick->rect.height - 4, (int)brick->rect.width - 8, 2, Fade(BLACK, 0.3f));
     }
     DrawRectangleRec(game->paddle, CYAN);
-    DrawRectangle((int)game->paddle.x + 10, (int)game->paddle.y + 4, (int)game->paddle.width - 20, 3, WHITE);
-    DrawCircleV(game->ball, BALL_RADIUS + 5.0f, Fade(NEON_PINK, 0.2f));
-    DrawCircleV(game->ball, BALL_RADIUS, NEON_PINK);
-    DrawCircleV(game->ball, BALL_RADIUS / 2.0f, WHITE);
+    drawNeurosOrb(game->ball, BALL_RADIUS, NEON_PINK);
 
     if (game->combo > 1 && game->phase == PLAYING) { DrawText(TextFormat("COMBO x%d", game->combo < 5 ? game->combo : 5), 38, 100, 20, NEON_PINK); }
     if (game->phase == READY) {
