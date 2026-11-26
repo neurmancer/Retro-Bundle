@@ -20,7 +20,7 @@
 - Partially Physically Accurate Galaga
 - 2048
 - Blackjack
-- Overdrive
+- Overdriveg
 
 ## Up-coming Games
 
@@ -49,7 +49,7 @@ Executables are placed in `bins/`; use `make bins/blackjack` (or another game na
 
 ### Tetris
 
-Stack blocks and clear lines.
+Stack blocks and clear lines duh...
 
 ### Overdrive
 
